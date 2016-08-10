@@ -1,11 +1,10 @@
 # rock3tman
 Quick script to set up VPN server and reverse VPN for Nethunter
 
-
 ## Usage
 ```bash
 root@kali:~# ./rocketman.sh 
-Usage: rocketman.sh
+Usage: rocketman.sh [-arg]
                            *     .--.
                                  / / 
                 +               | |
@@ -25,7 +24,9 @@ Usage: rocketman.sh
                  _..--"""````"""--.._
             _.- -._
           - -
-oiP9rrk22W2KsD98PMxZ9g/3XpgNLOWrmNMQzNyeG7I11nlNhlfAKBFpQBionmvBjinGEVm/9Gr08ctvPpi+LroIxT4wdNk9zddLfDQ8fVg=
+oiP9rrk22W2KsD98PMxZ9g/3XpgNLOWrmNMQzNyeG7I11nlNhlfAKBFpQBionmvBjinGEVm/9Gr
+08ctvPpi+LroIxT4wdNk9zddLfDQ8fVg=
+
 Don't forget to edit variables in rocketman.sh!
 
 -s, --server     : Build a OpenVPN Server with client ovpn
@@ -33,18 +34,41 @@ Don't forget to edit variables in rocketman.sh!
 -r, --reverse    : Set up your routes/iptables for reverse VPN on server
 -f, --flush      : Flush your IPTables
 -n, --nethunter  : Set up Nethunter Reverse VPN
+-h, --help       : Help Menu (this)
 --start-server   : Start OpenVPN server
 ```
 
-Edit rocketman.sh variables to customize to your needs.
+## Instructions
+
+```bash
+cd ~
+wget https://raw.githubusercontent.com/binkybear/rock3tman/master/rocketman.sh
+chmod +x rocketman.sh
+# Edit rocketman.sh with either nano/vi/leafpad/etc
+./rocketman.sh
+```
 
 ### Server Side
 
-Set up a VPN on server, such as a VPS, using ./rocketman --server.  This will install openvpn/easy-rsa and generate keys and client ovpn file.  If you just want to build a client ovpn file ./rocketman --client.
+Before starting, make sure to set up variables on server side on something like a VPS, using:
 
-### Nethunter
+```bash
+./rocketman -s
+```
 
-Add the ovpn file your android device and rocketman.sh inside Kali (chroot).  Run ./rocketman --nethunter and it will set up your VPN connection.
+After OpenVPN is installed you can run the server with:
+```bash
+./rocketman --start-server
+```
+This will set up your iptables and start OpenVPN.  You will need to add a route to the local network using the generated command from script after the client has connected.
+
+### Nethunter Side
+
+Add the ovpn file your android device and rocketman.sh inside Kali (chroot).  Download script using instructions above.  
+```bash
+./rocketman --nethunter 
+```
+This SHOULD initiate the VPN connection.
 
 ### TODO
 
