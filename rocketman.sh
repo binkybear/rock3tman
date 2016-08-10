@@ -81,7 +81,7 @@ if [[ $# -eq 0 ]] ; then
 fi
 
 # Help menu
-if if [ "$1" == "--help" ] || [ "$1" == "-h" ]; then
+if [ "$1" == "--help" ] || [ "$1" == "-h" ]; then
     def_help
 fi 
 
@@ -299,6 +299,9 @@ def_route(){
 
     iptables -t nat -A POSTROUTING -s 10.8.0.0/24 -o $SERVER_INTERFACE -j MASQUERADE
     echo "[+] IPTables set for VPN subnet"
+
+    route add -net $TARGET_CIDR gw 10.8.0.200
+    echo "[+] Added route from $TARGET_CIDR to VPN gateway"
 }
 
 if [ "$1" == "-r" ] || [ "$1" == "--reverse" ]; then
@@ -333,12 +336,12 @@ if [ "$1" == "--start-server" ]; then
     echo "[+] Flushing IP Tables"
     def_flush
 
-    echo "[+] Setting server routes"
-    def_route
-
     echo "[+] Starting openvpn server"
     cd /etc/openvpn
     openvpn server.conf &
+
+    echo "[+] Setting server routes"
+    def_route
 fi
 
 #####################
@@ -373,11 +376,17 @@ if [ "$1" == "-n" ] || [ "$1" == "--nethunter" ]; then
         ip route add default dev tun0 scope link table 61
         ip route add $TARGET_CIDR dev wlan0 scope link table 61
         ip route add broadcast 255.255.255.255 dev wlan0 scope link table 61
+        echo "[+] Adding IP routes"
+
+        iptables -t nat -A POSTROUTING -s 10.8.0.0/24 -o $NETHUNTER_INTERFACE -j MASQUERADE
+        echo "[+] Add NAT IPTABLE"
 
         echo "Hit enter to kill openvpn"
         read
         pkill openvpn
-
+        echo "[!] Killing OpenVPN"
+        def_flush
+        echo "[!] Flushing IPTABLES"
     else
         echo "[-] Could not find file $CLIENT_KEYNAME.ovpn on your SDCARD!"
     fi
