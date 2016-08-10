@@ -300,8 +300,8 @@ def_route(){
     iptables -t nat -A POSTROUTING -s 10.8.0.0/24 -o $SERVER_INTERFACE -j MASQUERADE
     echo "[+] IPTables set for VPN subnet"
 
-    route add -net $TARGET_CIDR gw 10.8.0.200
-    echo "[+] Added route from $TARGET_CIDR to VPN gateway"
+    echo "[!] When VPN connection is made copy/paste route to GW:"
+    echo "route add -net $TARGET_CIDR gw 10.8.0.200"
 }
 
 if [ "$1" == "-r" ] || [ "$1" == "--reverse" ]; then
@@ -333,13 +333,14 @@ fi
 #   Start Server    #
 #####################
 if [ "$1" == "--start-server" ]; then
-    echo "[+] Flushing IP Tables"
     def_flush
-
-    echo "[+] Starting openvpn server"
+    echo "[+] Flushing IP Tables"
+    
     cd /etc/openvpn
     openvpn server.conf &
+    echo "[+] Starting openvpn server"
 
+    sleep 5
     echo "[+] Setting server routes"
     def_route
 fi
