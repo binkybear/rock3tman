@@ -39,8 +39,7 @@ if [[ $EUID -ne 0 ]]; then
    exit
 fi
 
-# Default help if no arguments are supplied
-if [[ $# -eq 0 ]] ; then
+def_help(){
     echo "Usage: rocketman.sh [-arg]"
     echo '                           *     .--.'
     echo '                                 / / '
@@ -71,9 +70,20 @@ if [[ $# -eq 0 ]] ; then
     echo "-r, --reverse    : Set up your routes/iptables for reverse VPN on server"
     echo "-f, --flush      : Flush your IPTables"
     echo "-n, --nethunter  : Set up Nethunter Reverse VPN"
+    echo "-h, --help       : Help Menu (this)"
     echo "--start-server   : Start OpenVPN server"
-  exit 0
+    exit 0
+}
+
+# Default help if no arguments are supplied
+if [[ $# -eq 0 ]] ; then
+    def_help
 fi
+
+# Help menu
+if if [ "$1" == "--help" ] || [ "$1" == "-h" ]; then
+    def_help
+fi 
 
 # Dependency checks
 dep_check(){
