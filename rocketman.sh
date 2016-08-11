@@ -139,6 +139,11 @@ if [ "$1" == "--server" ] || [ "$1" == "-s" ]; then
         fi
     fi
 
+    read -p "Set IP or domain?  If not will use IP in configuration file (y/n): " SET_IP
+    if [ $SET_IP == "y" ] || [ $SET_IP == "yes" ]; then
+        read -p "Enter IP or domain: " SERVER_IP
+    fi
+
     # Generate the master CA certificate and key
     cd $INSTALLDIR
     cp -rf /usr/share/easy-rsa .
