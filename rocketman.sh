@@ -180,7 +180,7 @@ if [ "$1" == "--server" ] || [ "$1" == "-s" ]; then
     port $SERVER_PORT
     proto $SERVER_PROTOCOL
 
-    # Use tunnel instead of TAP
+    # TAP operates at layer 3
     dev tap
 
     # Server Keys
@@ -196,7 +196,6 @@ if [ "$1" == "--server" ] || [ "$1" == "-s" ]; then
     # Override the Client default gateway by using 0.0.0.0/1 and
     # 128.0.0.0/1 rather than 0.0.0.0/0. This has the benefit of
     # overriding but not wiping out the original default gateway.
-    push-reset
     push "redirect-gateway def1 bypass-dhcp"
 
     # Network Settings
@@ -227,15 +226,15 @@ EOF
     else
         echo "[-] Nothing found at /etc/openvpn/static"
     fi
-fi
 
-if [ "$1" == "--server" ] || [ "$1" == "-s" ] || [ "$1" == "--client" ] || [ "$1" == "-c" ]; then
     # Assigns .200 to client. We can have more than one
     touch /etc/openvpn/static/client
     echo "ifconfig-push $CLIENT_IP 255.255.255.0" > /etc/openvpn/static/client
     #echo "iroute $TARGET_RANGE" >> /etc/openvpn/static/client
     echo "[+] Created static client /etc/openvpn/static/client"
+fi
 
+if [ "$1" == "--server" ] || [ "$1" == "-s" ] || [ "$1" == "--client" ] || [ "$1" == "-c" ]; then
     # Generate OVPN file for client to use. 
     cd $INSTALLDIR/easy-rsa/keys
     cat << EOF > "$INSTALLDIR/$CLIENT_KEYNAME.ovpn"
@@ -292,13 +291,14 @@ def_route(){
     echo "1" > /proc/sys/net/ipv4/ip_forward
     echo "[+] Enable IP forwarding"
 
-    iptables -t nat -A POSTROUTING -s 10.8.0.0/24 -o $SERVER_INTERFACE -j MASQUERADE
+    sudo iptables -t nat -A POSTROUTING -s 10.8.0.0/24 -o $SERVER_INTERFACE -j MASQUERADE
     echo "[+] IPTables set for VPN subnet"
 
-    echo "[!] When VPN connection is made copy/paste route to GW:"
-    ip route del 192.168.1.0/24 via 10.8.0.2
     # Create route 
-    echo "route add -net $TARGET_CIDR gw 10.8.0.200"
+    sudo route add -net $TARGET_CIDR gw 10.8.0.200 dev tap0
+    #sudo route add 10.8.0.200 /24 gw 10.8.0.1 dev tap0
+    echo "[!] Adding route from $TARGET_CIDR to gateway 10.8.0.200"
+
 }
 
 if [ "$1" == "-r" ] || [ "$1" == "--reverse" ]; then
@@ -319,6 +319,7 @@ def_flush(){
     sudo iptables -t mangle -F
     sudo iptables -F
     sudo iptables -X
+    #sudo for i in $( iptables -t nat --line-numbers -L | grep ^[0-9] | awk '{ print $1 }' | tac ); do iptables -t nat -D POSTROUTING $i; done
     echo "[+] Iptables flushed!"    
 }
 
@@ -371,6 +372,8 @@ if [ "$1" == "-n" ] || [ "$1" == "--nethunter" ]; then
 
         # Set gateway for target network/VPN network
         ip route replace default via $TARGET_GATEWAY dev $NETHUNTER_INTERFACE
+
+        # Table 61
         ip rule add from $TARGET_CIDR lookup 61
         ip route add default dev tap0 scope link table 61
         ip route add $TARGET_CIDR dev wlan0 scope link table 61
