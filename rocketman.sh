@@ -181,7 +181,7 @@ if [ "$1" == "--server" ] || [ "$1" == "-s" ]; then
     proto $SERVER_PROTOCOL
 
     # Use tunnel instead of TAP
-    dev tun
+    dev tap
 
     # Server Keys
     ca ca.crt
@@ -196,15 +196,11 @@ if [ "$1" == "--server" ] || [ "$1" == "-s" ]; then
     # Override the Client default gateway by using 0.0.0.0/1 and
     # 128.0.0.0/1 rather than 0.0.0.0/0. This has the benefit of
     # overriding but not wiping out the original default gateway.
+    push-reset
     push "redirect-gateway def1 bypass-dhcp"
 
     # Network Settings
     server 10.8.0.0 255.255.255.0
-
-    # Client-to-client and route allows network traffic between subnets
-    route $TARGET_RANGE
-    client-to-client
-    push "route $TARGET_RANGE"
 
     # Additional Settings
     keepalive 10 120
@@ -237,15 +233,14 @@ if [ "$1" == "--server" ] || [ "$1" == "-s" ] || [ "$1" == "--client" ] || [ "$1
     # Assigns .200 to client. We can have more than one
     touch /etc/openvpn/static/client
     echo "ifconfig-push $CLIENT_IP 255.255.255.0" > /etc/openvpn/static/client
-    echo "iroute $TARGET_RANGE" >> /etc/openvpn/static/client
+    #echo "iroute $TARGET_RANGE" >> /etc/openvpn/static/client
     echo "[+] Created static client /etc/openvpn/static/client"
 
     # Generate OVPN file for client to use. 
     cd $INSTALLDIR/easy-rsa/keys
     cat << EOF > "$INSTALLDIR/$CLIENT_KEYNAME.ovpn"
     client
-    dev tun
-    dev-type tun
+    dev tap
     ns-cert-type server
     proto tcp
     keepalive 10 120
@@ -301,6 +296,8 @@ def_route(){
     echo "[+] IPTables set for VPN subnet"
 
     echo "[!] When VPN connection is made copy/paste route to GW:"
+    ip route del 192.168.1.0/24 via 10.8.0.2
+    # Create route 
     echo "route add -net $TARGET_CIDR gw 10.8.0.200"
 }
 
@@ -336,8 +333,7 @@ if [ "$1" == "--start-server" ]; then
     def_flush
     echo "[+] Flushing IP Tables"
     
-    cd /etc/openvpn
-    openvpn server.conf &
+    openvpn --cd /etc/openvpn --config /etc/openvpn/server.conf &
     echo "[+] Starting openvpn server"
 
     sleep 5
@@ -363,6 +359,8 @@ if [ "$1" == "-n" ] || [ "$1" == "--nethunter" ]; then
         # Setup tun
         mkdir -p /dev/net
         mknod /dev/net/tun c 10 200
+        mknod /dev/net/tap c 10 200
+        chmod 600 /dev/net/tap
         chmod 600 /dev/net/tun
         cat /dev/net/tun
         #openvpn --mktun --dev tun0
@@ -374,7 +372,7 @@ if [ "$1" == "-n" ] || [ "$1" == "--nethunter" ]; then
         # Set gateway for target network/VPN network
         ip route replace default via $TARGET_GATEWAY dev $NETHUNTER_INTERFACE
         ip rule add from $TARGET_CIDR lookup 61
-        ip route add default dev tun0 scope link table 61
+        ip route add default dev tap0 scope link table 61
         ip route add $TARGET_CIDR dev wlan0 scope link table 61
         ip route add broadcast 255.255.255.255 dev wlan0 scope link table 61
         echo "[+] Adding IP routes"
