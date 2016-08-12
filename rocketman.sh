@@ -118,7 +118,7 @@ fi
 if [ "$1" == "--server" ] || [ "$1" == "-s" ]; then
 
     if [ -f "/etc/openvpn/server.crt" ] || [ -f "/etc/openvpn/server.key" ]; then
-        read -p "[!] Found existing keys/certs in /etc/openvpn.  Remove? (y/n) : " remove_keys
+        read -p "[?] Found existing keys/certs in /etc/openvpn.  Remove? (y/n) : " remove_keys
         if [ $remove_keys == "y" ] || [ $remove_keys == "yes" ]; then
             rm -f /etc/openvpn/{server.crt,server.key,dh2048.pem,ca.crt,ta.key}
         else
@@ -128,20 +128,23 @@ if [ "$1" == "--server" ] || [ "$1" == "-s" ]; then
     fi
 
     # Get external IP
-    read -p "Get external IP from internet? (y/n) :" GET_IP
+    read -p "[?] Current configured IP is $SERVER_IP. Get external IP from internet? (y/n) : " GET_IP
     if [ $GET_IP == "y" ] || [ $GET_IP == "yes" ]; then
         SERVER_IP=`curl ifconfig.me`
         if [ $? -eq 0 ]; then
             echo "[+] Got external IP from ifconfig.me: $SERVER_IP"
+            sleep 5
         else
             echo "[-] Failed to get external IP"
             exit
         fi
     fi
+    if [ $GET_IP == "n" ] || [ $GET_IP == "no" ]; then
+        read -p "[?] Current configured IP is $SERVER_IP. Change IP or domain? (y/n): " SET_IP
 
-    read -p "Set IP or domain?  If not will use IP in configuration file (y/n): " SET_IP
-    if [ $SET_IP == "y" ] || [ $SET_IP == "yes" ]; then
-        read -p "Enter IP or domain: " SERVER_IP
+        if [ $SET_IP == "y" ] || [ $SET_IP == "yes" ]; then
+            read -p "[!] Enter IP or domain: " SERVER_IP
+        fi
     fi
 
     # Generate the master CA certificate and key
@@ -296,12 +299,22 @@ def_route(){
     echo "1" > /proc/sys/net/ipv4/ip_forward
     echo "[+] Enable IP forwarding"
 
+    read -p "[?] Change network interface from $SERVER_INTERFACE? (y/n) : " select_interface
+    if [ $select_interface == "y" ] || [ $select_interface == "yes" ]; then
+        cd /sys/class/net
+        select INTERFACE in *;
+        do
+            SERVER_INTERFACE=$INTERFACE
+            echo "[+] Interface $SERVER_INTERFACE selected"
+            break
+        done
+    fi
+
     sudo iptables -t nat -A POSTROUTING -s 10.8.0.0/24 -o $SERVER_INTERFACE -j MASQUERADE
-    echo "[+] IPTables set for VPN subnet"
+    echo "[+] IPTables set for VPN subnet: iptables -t nat -A POSTROUTING -s 10.8.0.0/24 -o $SERVER_INTERFACE -j MASQUERADE"
 
     # Create route 
     sudo route add -net $TARGET_CIDR gw 10.8.0.200 dev tap0
-    #sudo route add 10.8.0.200 /24 gw 10.8.0.1 dev tap0
     echo "[!] Adding route from $TARGET_CIDR to gateway 10.8.0.200"
 
 }
@@ -314,6 +327,12 @@ fi
 #  Flush IPTABLES   #
 #####################
 def_flush(){
+
+    pkill openvpn
+    echo "[!] Killing OpenVPN!"
+
+    sleep 3
+
     # Make sure we don't get disconnected
     sudo iptables -P INPUT ACCEPT
     sudo iptables -P FORWARD ACCEPT
@@ -324,8 +343,13 @@ def_flush(){
     sudo iptables -t mangle -F
     sudo iptables -F
     sudo iptables -X
-    #sudo for i in $( iptables -t nat --line-numbers -L | grep ^[0-9] | awk '{ print $1 }' | tac ); do iptables -t nat -D POSTROUTING $i; done
-    echo "[+] Iptables flushed!"    
+    for i in $( iptables -t nat --line-numbers -L | grep ^[0-9] | awk '{ print $1 }' | tac )
+    do
+        iptables -t nat -D POSTROUTING $i
+    done
+    echo "[+] Iptables flushed!" 
+
+    sudo route del -net $TARGET_CIDR gw 10.8.0.200 dev tap0
 }
 
 if [ "$1" == "-f" ] || [ "$1" == "--flush" ]; then
