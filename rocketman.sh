@@ -16,7 +16,7 @@ SERVER_PROTOCOL="tcp"                       # tcp or udp
 SERVER_INTERFACE="eth0"                     # Interface of VPN server
 
 CLIENT_KEYNAME="im_a_rocketman"             # Generate client OVPN file (filename).ovpn
-CLIENT_IP="10.8.0.200"                      # Specify IP in /24 range (10.8.0.1-10.8.0.254)
+CLIENT_IP="10.8.0.2"                      # Specify IP in /24 range (10.8.0.1-10.8.0.254)
 
 TARGET_GATEWAY="192.168.1.1"                # Gateway of target network
 TARGET_CIDR="192.168.1.0/24"                # CIDR of target network
@@ -183,13 +183,12 @@ if [ "$1" == "--server" ] || [ "$1" == "-s" ]; then
     echo "[+] Copying all generated keys/certificates to /etc/openvpn"
 
     # Generate the OpenVPN server configuration file
-    cat << EOF > /etc/openvpn/server.conf
+    cat << EOF > /etc/openvpn/doom_server.conf
     # OPENVPN SERVER CONFIG FILE
     port $SERVER_PORT
     proto $SERVER_PROTOCOL
 
-    # TAP operates at layer 3
-    dev tap
+    dev tun
 
     # Server Keys
     ca ca.crt
@@ -205,6 +204,15 @@ if [ "$1" == "--server" ] || [ "$1" == "-s" ]; then
     # 128.0.0.0/1 rather than 0.0.0.0/0. This has the benefit of
     # overriding but not wiping out the original default gateway.
     push "redirect-gateway def1 bypass-dhcp"
+
+    # See other clients
+    client-to-client
+
+    # Route local
+    route $TARGET_RANGE
+
+    # Push route
+    push "route $TARGET_RANGE"
 
     # Network Settings
     server 10.8.0.0 255.255.255.0
@@ -238,7 +246,7 @@ EOF
     # Assigns .200 to client. We can have more than one
     touch /etc/openvpn/static/client
     echo "ifconfig-push $CLIENT_IP 255.255.255.0" > /etc/openvpn/static/client
-    #echo "iroute $TARGET_RANGE" >> /etc/openvpn/static/client
+    echo "iroute $TARGET_RANGE" >> /etc/openvpn/static/client
     echo "[+] Created static client /etc/openvpn/static/client"
 fi
 
@@ -247,12 +255,13 @@ if [ "$1" == "--server" ] || [ "$1" == "-s" ] || [ "$1" == "--client" ] || [ "$1
     cd $INSTALLDIR/easy-rsa/keys
     cat << EOF > "$INSTALLDIR/$CLIENT_KEYNAME.ovpn"
     client
-    dev tap
+    dev tun
     ns-cert-type server
-    proto tcp
+    proto $SERVER_PROTOCOL
     keepalive 10 120
     remote $SERVER_IP $SERVER_PORT
     resolv-retry infinite
+    push-peer-info
     nobind
     persist-key
     persist-tun
@@ -314,8 +323,8 @@ def_route(){
     echo "[+] IPTables set for VPN subnet: iptables -t nat -A POSTROUTING -s 10.8.0.0/24 -o $SERVER_INTERFACE -j MASQUERADE"
 
     # Create route 
-    sudo route add -net $TARGET_CIDR gw 10.8.0.200 dev tap0
-    echo "[!] Adding route from $TARGET_CIDR to gateway 10.8.0.200"
+    #sudo route add -net $TARGET_CIDR gw 10.8.0.200 dev tap0
+    #echo "[!] Adding route from $TARGET_CIDR to gateway 10.8.0.200"
 
 }
 
@@ -349,7 +358,7 @@ def_flush(){
     done
     echo "[+] Iptables flushed!" 
 
-    sudo route del -net $TARGET_CIDR gw 10.8.0.200 dev tap0
+    #sudo route del -net $TARGET_CIDR gw 10.8.0.200 dev tap0
 }
 
 if [ "$1" == "-f" ] || [ "$1" == "--flush" ]; then
@@ -362,13 +371,14 @@ fi
 if [ "$1" == "--start-server" ]; then
     def_flush
     echo "[+] Flushing IP Tables"
-    
-    openvpn --cd /etc/openvpn --config /etc/openvpn/server.conf &
-    echo "[+] Starting openvpn server"
 
     sleep 5
     echo "[+] Setting server routes"
     def_route
+    
+    openvpn --cd /etc/openvpn --config /etc/openvpn/doom_server.conf &
+    echo "[+] Starting openvpn server"
+
 fi
 
 #####################
@@ -404,7 +414,7 @@ if [ "$1" == "-n" ] || [ "$1" == "--nethunter" ]; then
 
         # Table 61
         ip rule add from $TARGET_CIDR lookup 61
-        ip route add default dev tap0 scope link table 61
+        ip route add default dev tun0 scope link table 61
         ip route add $TARGET_CIDR dev wlan0 scope link table 61
         ip route add broadcast 255.255.255.255 dev wlan0 scope link table 61
         echo "[+] Adding IP routes"
