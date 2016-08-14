@@ -198,7 +198,7 @@ dh dh2048.pem
 tls-auth ta.key 0
 
 # Contains client(s) ip and iroute
-# client-config-dir static
+client-config-dir static
 
 # Override the Client default gateway by using 0.0.0.0/1 and
 # 128.0.0.0/1 rather than 0.0.0.0/0. This has the benefit of
