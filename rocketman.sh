@@ -16,7 +16,7 @@ SERVER_PROTOCOL="tcp"                       # tcp or udp
 SERVER_INTERFACE="eth0"                     # Interface of VPN server
 
 CLIENT_KEYNAME="im_a_rocketman"             # Generate client OVPN file (filename).ovpn
-CLIENT_IP="10.8.0.2"                      # Specify IP in /24 range (10.8.0.1-10.8.0.254)
+CLIENT_IP="10.8.0.200"                      # Specify IP in /24 range (10.8.0.1-10.8.0.254)
 
 TARGET_GATEWAY="192.168.1.1"                # Gateway of target network
 TARGET_CIDR="192.168.1.0/24"                # CIDR of target network
@@ -229,10 +229,10 @@ if [ "$1" == "--server" ] || [ "$1" == "-s" ]; then
 EOF
 
     # Check for successful server.conf file
-    if [ -f "/etc/openvpn/server.conf" ]; then
-        echo "[+] Created server configuration file at /etc/openvpn/server.conf"
+    if [ -f "/etc/openvpn/doom_server.conf" ]; then
+        echo "[+] Created server configuration file at /etc/openvpn/doom_server.conf"
     else
-        echo "[-] Something went wrong!  No server.conf file found!"
+        echo "[-] Something went wrong!  No doom_server.conf file found!"
         exit
     fi
 
