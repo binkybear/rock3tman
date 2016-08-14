@@ -184,48 +184,50 @@ if [ "$1" == "--server" ] || [ "$1" == "-s" ]; then
 
     # Generate the OpenVPN server configuration file
     cat << EOF > /etc/openvpn/doom_server.conf
-    # OPENVPN SERVER CONFIG FILE
-    port $SERVER_PORT
-    proto $SERVER_PROTOCOL
+# OPENVPN SERVER CONFIG FILE
+port $SERVER_PORT
+proto $SERVER_PROTOCOL
 
-    dev tun
+dev tun
 
-    # Server Keys
-    ca ca.crt
-    cert server.crt
-    key server.key
-    dh dh2048.pem
-    tls-auth ta.key 0
+# Server Keys
+ca ca.crt
+cert server.crt
+key server.key
+dh dh2048.pem
+tls-auth ta.key 0
 
-    # Contains client(s) ip and iroute
-    client-config-dir static
+# Contains client(s) ip and iroute
+# client-config-dir static
 
-    # Override the Client default gateway by using 0.0.0.0/1 and
-    # 128.0.0.0/1 rather than 0.0.0.0/0. This has the benefit of
-    # overriding but not wiping out the original default gateway.
-    push "redirect-gateway def1 bypass-dhcp"
+# Override the Client default gateway by using 0.0.0.0/1 and
+# 128.0.0.0/1 rather than 0.0.0.0/0. This has the benefit of
+# overriding but not wiping out the original default gateway.
+push "redirect-gateway def1 bypass-dhcp"
 
-    # See other clients
-    client-to-client
+# See other clients
+client-to-client
 
-    # Route local
-    route $TARGET_RANGE
+# Network Settings
+server 10.8.0.0 255.255.255.0
 
-    # Push route
-    push "route $TARGET_RANGE"
+# Route to target subnet
+route $TARGET_RANGE
+# Add route to Client routing table for the OpenVPN Server
+push "route 10.8.0.1 255.255.255.255"
+# Add route to Client routing table for the OpenVPN Subnet
+push "route 10.8.0.0 255.255.255.0"
 
-    # Network Settings
-    server 10.8.0.0 255.255.255.0
-
-    # Additional Settings
-    keepalive 10 120
-    comp-lzo
-    user nobody
-    group nogroup
-    persist-key
-    persist-tun
-    status openvpn-status.log
-    verb 3
+# Additional Settings
+keepalive 10 120
+comp-lzo
+user nobody
+group nogroup
+ping-timer-rem
+persist-key
+persist-tun
+status openvpn-status.log
+verb 3
 EOF
 
     # Check for successful server.conf file
@@ -238,59 +240,60 @@ EOF
 
     mkdir -p /etc/openvpn/static
     if [ -d "/etc/openvpn/static" ]; then
-        echo "[+] Created /etc/openvpn/static"
+        echo "[+] Created dir /etc/openvpn/static"
     else
-        echo "[-] Nothing found at /etc/openvpn/static"
+        echo "[-] Nothing found at dir /etc/openvpn/static"
     fi
 
     # Assigns .200 to client. We can have more than one
     touch /etc/openvpn/static/client
     echo "ifconfig-push $CLIENT_IP 255.255.255.0" > /etc/openvpn/static/client
     echo "iroute $TARGET_RANGE" >> /etc/openvpn/static/client
-    echo "[+] Created static client /etc/openvpn/static/client"
+    echo "[+] Created static client IP file /etc/openvpn/static/client"
 fi
 
 if [ "$1" == "--server" ] || [ "$1" == "-s" ] || [ "$1" == "--client" ] || [ "$1" == "-c" ]; then
     # Generate OVPN file for client to use. 
     cd $INSTALLDIR/easy-rsa/keys
     cat << EOF > "$INSTALLDIR/$CLIENT_KEYNAME.ovpn"
-    client
-    dev tun
-    ns-cert-type server
-    proto $SERVER_PROTOCOL
-    keepalive 10 120
-    remote $SERVER_IP $SERVER_PORT
-    resolv-retry infinite
-    push-peer-info
-    nobind
-    persist-key
-    persist-tun
-    ca [inline]
-    cert [inline]
-    key [inline]
-    tls-auth [inline] 1
-    comp-lzo
-    verb 3
-    <ca>
+client
+dev tun
+ns-cert-type server
+proto $SERVER_PROTOCOL
+keepalive 10 120
+remote $SERVER_IP $SERVER_PORT
+resolv-retry infinite
+push-peer-info
+nobind
+ping-timer-rem
+persist-key
+persist-tun
+ca [inline]
+cert [inline]
+key [inline]
+tls-auth [inline] 1
+comp-lzo
+verb 3
+<ca>
 EOF
-    cat ca.crt >> $INSTALLDIR/$CLIENT_KEYNAME.ovpn
-    cat << EOF >> $INSTALLDIR/$CLIENT_KEYNAME.ovpn
-    </ca>
-    <cert>
+cat ca.crt >> $INSTALLDIR/$CLIENT_KEYNAME.ovpn
+cat << EOF >> $INSTALLDIR/$CLIENT_KEYNAME.ovpn
+</ca>
+<cert>
 EOF
-    cat client.crt >> $INSTALLDIR/$CLIENT_KEYNAME.ovpn
-    cat << EOF >> $INSTALLDIR/$CLIENT_KEYNAME.ovpn
-    </cert>
-    <key>
+cat client.crt >> $INSTALLDIR/$CLIENT_KEYNAME.ovpn
+cat << EOF >> $INSTALLDIR/$CLIENT_KEYNAME.ovpn
+</cert>
+<key>
 EOF
-    cat client.key >> $INSTALLDIR/$CLIENT_KEYNAME.ovpn
-    cat << EOF >> $INSTALLDIR/$CLIENT_KEYNAME.ovpn
-    </key>
-    <tls-auth>
+cat client.key >> $INSTALLDIR/$CLIENT_KEYNAME.ovpn
+cat << EOF >> $INSTALLDIR/$CLIENT_KEYNAME.ovpn
+</key>
+<tls-auth>
 EOF
-    cat ta.key >> $INSTALLDIR/$CLIENT_KEYNAME.ovpn
-    cat << EOF >> $INSTALLDIR/$CLIENT_KEYNAME.ovpn
-    </tls-auth>
+cat ta.key >> $INSTALLDIR/$CLIENT_KEYNAME.ovpn
+cat << EOF >> $INSTALLDIR/$CLIENT_KEYNAME.ovpn
+</tls-auth>
 EOF
 
     if [ -f "$INSTALLDIR/$CLIENT_KEYNAME.ovpn" ]; then
