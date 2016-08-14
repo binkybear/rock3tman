@@ -69,7 +69,7 @@ def_help(){
     echo "-c, --client     : Build a client OVPN file only"
     echo "-r, --reverse    : Set up your routes/iptables for reverse VPN on server"
     echo "-f, --flush      : Flush your IPTables"
-    echo "-n, --nethunter  : Set up Nethunter Reverse VPN"
+    echo "-n, --nethunter  : Set up iptables for Nethunter Reverse VPN"
     echo "-h, --help       : Help Menu (this)"
     echo "--start-server   : Start OpenVPN server"
     exit 0
@@ -211,13 +211,6 @@ client-to-client
 # Network Settings
 server 10.8.0.0 255.255.255.0
 
-# Route to target subnet
-route $TARGET_RANGE
-# Add route to Client routing table for the OpenVPN Server
-push "route 10.8.0.1 255.255.255.255"
-# Add route to Client routing table for the OpenVPN Subnet
-push "route 10.8.0.0 255.255.255.0"
-
 # Additional Settings
 keepalive 10 120
 comp-lzo
@@ -326,8 +319,8 @@ def_route(){
     echo "[+] IPTables set for VPN subnet: iptables -t nat -A POSTROUTING -s 10.8.0.0/24 -o $SERVER_INTERFACE -j MASQUERADE"
 
     # Create route 
-    #sudo route add -net $TARGET_CIDR gw 10.8.0.200 dev tap0
-    #echo "[!] Adding route from $TARGET_CIDR to gateway 10.8.0.200"
+    sudo route add -host 10.8.0.200 dev tun0
+    sudo route add -net $TARGET_CIDR gw 10.8.0.200 dev tun0
 
 }
 
@@ -361,7 +354,9 @@ def_flush(){
     done
     echo "[+] Iptables flushed!" 
 
-    #sudo route del -net $TARGET_CIDR gw 10.8.0.200 dev tap0
+    # Delete route 
+    sudo route del -host 10.8.0.200 dev tun0
+    sudo route del -net $TARGET_CIDR gw 10.8.0.200 dev tun0
 }
 
 if [ "$1" == "-f" ] || [ "$1" == "--flush" ]; then
@@ -389,49 +384,13 @@ fi
 #####################
 #
 # Transfer $CLIENT_KEYNAME.ovpn to your /sdcard on device.  
+# Open ovpn file using https://f-droid.org/repository/browse/?fdid=de.blinkt.openvpn
 
 if [ "$1" == "-n" ] || [ "$1" == "--nethunter" ]; then
-    if [ -f "/sdcard/$CLIENT_KEYNAME.ovpn" ]; then
-        
-        # Make tmp dir once
-        mkdir -p /data/local/tmp
 
-        # Turn the server into the client's gateway
-        sudo echo "1" > /proc/sys/net/ipv4/ip_forward
+    # Turn the server into the client's gateway
+    sudo echo "1" > /proc/sys/net/ipv4/ip_forward
 
-        # Setup tun
-        mkdir -p /dev/net
-        mknod /dev/net/tun c 10 200
-        mknod /dev/net/tap c 10 200
-        chmod 600 /dev/net/tap
-        chmod 600 /dev/net/tun
-        cat /dev/net/tun
-        #openvpn --mktun --dev tun0
-
-        # Run ovpn config file
-        echo "[+] Starting openvpn with /sdcard/$CLIENT_KEYNAME.ovpn"
-        openvpn --config /sdcard/$CLIENT_KEYNAME.ovpn &
-
-        # Set gateway for target network/VPN network
-        ip route replace default via $TARGET_GATEWAY dev $NETHUNTER_INTERFACE
-
-        # Table 61
-        ip rule add from $TARGET_CIDR lookup 61
-        ip route add default dev tun0 scope link table 61
-        ip route add $TARGET_CIDR dev wlan0 scope link table 61
-        ip route add broadcast 255.255.255.255 dev wlan0 scope link table 61
-        echo "[+] Adding IP routes"
-
-        iptables -t nat -A POSTROUTING -s 10.8.0.0/24 -o $NETHUNTER_INTERFACE -j MASQUERADE
-        echo "[+] Add NAT IPTABLE"
-
-        echo "Hit enter to kill openvpn"
-        read
-        pkill openvpn
-        echo "[!] Killing OpenVPN"
-        def_flush
-        echo "[!] Flushing IPTABLES"
-    else
-        echo "[-] Could not find file $CLIENT_KEYNAME.ovpn on your SDCARD!"
-    fi
+    # Set gateway for target network/VPN network
+    ip route replace default via $TARGET_GATEWAY dev $NETHUNTER_INTERFACE
 fi
