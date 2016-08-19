@@ -36,7 +36,7 @@ chmod +x doom.sh
 
 ### Server Side
 
-Before starting, make sure to set up variables on server side on something like a VPS, using:
+Before starting, make sure to set up variables in script. Using a publicly routable server (e.g. VPS), set up the VPN server:
 
 ```bash
 ./doom.sh -s
@@ -46,7 +46,7 @@ After OpenVPN is installed you can run the server with:
 ```bash
 ./doom.sh --start-server
 ```
-This will set up your iptables and start OpenVPN.  You will need to add a route to the local network using the generated command from script after the client has connected.
+This will set up your iptables/routes and start OpenVPN.
 
 ### Nethunter Side
 
