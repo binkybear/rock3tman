@@ -50,12 +50,20 @@ This will set up your iptables and start OpenVPN.  You will need to add a route 
 
 ### Nethunter Side
 
-Add the ovpn file your android device and doom.sh inside Kali (chroot).  Download script using instructions above.  
+Download and install OpenVPN client for Android.  You can get from either Google Play store or Fdroid:
+
+https://f-droid.org/repository/browse/?fdid=de.blinkt.openvpn
+or
+https://play.google.com/store/apps/details?id=de.blinkt.openvpn&hl=en
+
+Get ovpn file off the server and download it to your phone/tablet.  Inside application add the ovpn file and connect.
+
+For additional routing inside kali chroot:
+
+Download script using instructions above.  
 ```bash
 ./doom.sh --nethunter 
 ```
-This SHOULD initiate the VPN connection.
-
 ### TODO
 
-Make sure it works!  Routing is the biggest issue.
+Fix routing!  Right now it can only see private IP of client (not subnet).
