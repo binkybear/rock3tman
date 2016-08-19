@@ -1,39 +1,25 @@
-# rock3tman
+# Kali VPN of DOOM
 Quick script to set up VPN server and reverse VPN for Nethunter
 
 ## Usage
 ```bash
-root@kali:~# ./rocketman.sh 
-Usage: rocketman.sh [-arg]
-                           *     .--.
-                                 / / 
-                +               | |
-                                 \ \_
-                   *          +   --  *
-                       +   /\
-          +              . .   *
-                 *      /======\      +
-                       ;:.  _   ;
-                       |:. (_)  |
-                       |:.  _   |
-             +         |:. (_)  |          *
-                       ;:.      ;
-                      / \:.    /  \.
-                    / .---:._./--. \
-                    |/    /||\    \|
-                 _..--"""````"""--.._
-            _.- -._
-          - -
-oiP9rrk22W2KsD98PMxZ9g/3XpgNLOWrmNMQzNyeG7I11nlNhlfAKBFpQBionmvBjinGEVm/9Gr
-08ctvPpi+LroIxT4wdNk9zddLfDQ8fVg=
+Usage: ./doom.sh [-arg]
 
-Don't forget to edit variables in rocketman.sh!
+ _  __       _  _  __      __ _____   _   _           __   _____    ____    ____   __  __  
+ | |/ /      | |(_) \ \    / /|  __ \ | \ | |         / _| |  __ \  / __ \  / __ \ |  \/  |
+ | ^ /  __ _ | | _   \ \  / / | |__) ||  \| |   ___  | |_  | |  | || |  | || |  | || \  / |
+ |  <  / _` || || |   \ \/ /  |  ___/ | . ` |  / _ \ |  _| | |  | || |  | || |  | || |\/| |
+ | . \| (_| || || |    \  /   | |     | |\  | | (_) || |   | |__| || |__| || |__| || |  | |
+ |_|\_\\__,_||_||_|     \/    |_|     |_| \_|  \___/ |_|   |_____/  \____/  \____/ |_|  |_|
+
+
+Don't forget to edit variables in ./doom.sh!
 
 -s, --server     : Build a OpenVPN Server with client ovpn
 -c, --client     : Build a client OVPN file only
 -r, --reverse    : Set up your routes/iptables for reverse VPN on server
 -f, --flush      : Flush your IPTables
--n, --nethunter  : Set up Nethunter Reverse VPN
+-n, --nethunter  : Set up iptables for Nethunter Reverse VPN
 -h, --help       : Help Menu (this)
 --start-server   : Start OpenVPN server
 ```
@@ -42,10 +28,10 @@ Don't forget to edit variables in rocketman.sh!
 
 ```bash
 cd ~
-wget https://raw.githubusercontent.com/binkybear/rock3tman/master/rocketman.sh
-chmod +x rocketman.sh
-# Edit rocketman.sh with either nano/vi/leafpad/etc
-./rocketman.sh
+wget https://raw.githubusercontent.com/binkybear/rock3tman/master/doom.sh
+chmod +x doom.sh
+# Edit doom.sh with either nano/vi/leafpad/etc
+./doom.sh
 ```
 
 ### Server Side
@@ -53,20 +39,20 @@ chmod +x rocketman.sh
 Before starting, make sure to set up variables on server side on something like a VPS, using:
 
 ```bash
-./rocketman -s
+./doom.sh -s
 ```
 
 After OpenVPN is installed you can run the server with:
 ```bash
-./rocketman --start-server
+./doom.sh --start-server
 ```
 This will set up your iptables and start OpenVPN.  You will need to add a route to the local network using the generated command from script after the client has connected.
 
 ### Nethunter Side
 
-Add the ovpn file your android device and rocketman.sh inside Kali (chroot).  Download script using instructions above.  
+Add the ovpn file your android device and doom.sh inside Kali (chroot).  Download script using instructions above.  
 ```bash
-./rocketman --nethunter 
+./doom.sh --nethunter 
 ```
 This SHOULD initiate the VPN connection.
 

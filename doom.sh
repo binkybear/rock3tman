@@ -1,9 +1,16 @@
 #!/bin/bash
 #
 #
-# Made by @_binkybear for reverse VPN on NH
-# Feel free to modify script however you like!
+# Made by @_binkybear to more easily set up a reverse VPN
 #
+# Instructions:
+#
+# To run: chmod +x && ./doom.sh [argument]
+# 0) Edit the variables in this file.  You must know private IP range on reverse vpn side.
+# 1) Generate the server by running ./doom.sh -s
+# 2) Start server (must have ip/port open to internet): ./doom.sh --start-server
+# 3) Copy ovpn file to device 
+# 4) Load ovpn using openvpn or app
 #
 #####################
 #     VARIABLES     #
@@ -15,7 +22,7 @@ SERVER_PORT="443"                           # Port for VPN server to listen on
 SERVER_PROTOCOL="tcp"                       # tcp or udp
 SERVER_INTERFACE="eth0"                     # Interface of VPN server
 
-CLIENT_KEYNAME="im_a_rocketman"             # Generate client OVPN file (filename).ovpn
+CLIENT_KEYNAME="doom"                       # Generate client OVPN file (filename).ovpn
 CLIENT_IP="10.8.0.200"                      # Specify IP in /24 range (10.8.0.1-10.8.0.254)
 
 TARGET_GATEWAY="192.168.1.1"                # Gateway of target network
@@ -40,30 +47,17 @@ if [[ $EUID -ne 0 ]]; then
 fi
 
 def_help(){
-    echo "Usage: rocketman.sh [-arg]"
-    echo '                           *     .--.'
-    echo '                                 / / '
-    echo '                +               | |'
-    echo '                                 \ \_'
-    echo '                   *          +   '--'  *'
-    echo '                       +   /\'
-    echo '          +              .'  '.   *'
-    echo '                 *      /======\      +'
-    echo '                       ;:.  _   ;'
-    echo '                       |:. (_)  |'
-    echo '                       |:.  _   |'
-    echo '             +         |:. (_)  |          *'
-    echo '                       ;:.      ;'
-    echo '                      / \:.    /  \.'
-    echo '                    / .---:._./--. \'
-    echo '                    |/    /||\    \|'
-    echo '                 _..--"""````"""--.._'
-    echo '            _.-'                      ``'-._'
-    echo '          -'                                '-'
-    echo 'oiP9rrk22W2KsD98PMxZ9g/3XpgNLOWrmNMQzNyeG7I11nlNhlfAKBFpQBionmvBjinGEVm/9Gr'
-    echo '08ctvPpi+LroIxT4wdNk9zddLfDQ8fVg='
-    echo ''
-    echo "Don't forget to edit variables in rocketman.sh!"
+    echo "Usage: $0 [-arg]"
+    echo ""
+    echo ' _  __       _  _  __      __ _____   _   _           __   _____    ____    ____   __  __  '
+    echo ' | |/ /      | |(_) \ \    / /|  __ \ | \ | |         / _| |  __ \  / __ \  / __ \ |  \/  |'
+    echo ' | ^ /  __ _ | | _   \ \  / / | |__) ||  \| |   ___  | |_  | |  | || |  | || |  | || \  / |'
+    echo ' |  <  / _` || || |   \ \/ /  |  ___/ | . ` |  / _ \ |  _| | |  | || |  | || |  | || |\/| |'
+    echo ' | . \| (_| || || |    \  /   | |     | |\  | | (_) || |   | |__| || |__| || |__| || |  | |'
+    echo ' |_|\_\\__,_||_||_|     \/    |_|     |_| \_|  \___/ |_|   |_____/  \____/  \____/ |_|  |_|'
+    echo ""                                                                               
+    echo ""                                                                               
+    echo "Don't forget to edit variables in $0!"
     echo ""
     echo "-s, --server     : Build a OpenVPN Server with client ovpn"
     echo "-c, --client     : Build a client OVPN file only"
@@ -113,8 +107,6 @@ fi
 #####################
 #   GENERATE KEYS   #
 #####################
-# V zvff gur rnegu fb zhpu V zvff zl jvsr Vg'f ybaryl bhg va fcnpr Ba fhpu n gvzryrff syvtug
-
 if [ "$1" == "--server" ] || [ "$1" == "-s" ]; then
 
     if [ -f "/etc/openvpn/server.crt" ] || [ -f "/etc/openvpn/server.key" ]; then
@@ -390,7 +382,6 @@ if [ "$1" == "-n" ] || [ "$1" == "--nethunter" ]; then
 
     # Turn the server into the client's gateway
     sudo echo "1" > /proc/sys/net/ipv4/ip_forward
-
-    # Set gateway for target network/VPN network
-    ip route replace default via $TARGET_GATEWAY dev $NETHUNTER_INTERFACE
+    # Allow traffic initiated from VPN to access LAN
+    iptables -t nat -I POSTROUTING -o wlan0 -s 10.8.0.0/24 -j MASQUERADE
 fi
