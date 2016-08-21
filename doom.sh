@@ -17,15 +17,14 @@
 #####################
 INSTALLDIR=$HOME                            # Install dir for client keys (default is OK)
 
-SERVER_IP="127.0.0.1"                       # Put in public IP of server
-SERVER_PORT="443"                           # Port for VPN server to listen on
+SERVER_IP="127.0.0.1"                       # Put in public IP of OpenVPN server (should not be localhost)
+SERVER_PORT="443"                           # Port for OpenVPN server to listen on
 SERVER_PROTOCOL="tcp"                       # tcp or udp
-SERVER_INTERFACE="eth0"                     # Interface of VPN server
+SERVER_INTERFACE="eth0"                     # Interface of OpenVPN server
 
-CLIENT_KEYNAME="doom"                       # Generate client OVPN file (filename).ovpn
-CLIENT_IP="10.8.0.200"                      # Specify IP in /24 range (10.8.0.1-10.8.0.254)
+CLIENT_KEYNAME="doom"                       # Generate client OVPN file (filename).ovpn [default: doom.ovpn]
+CLIENT_IP="10.8.0.200"                      # Specify Client IP in 10.8.0.0/24 range (10.8.0.1-10.8.0.254) [default: 10.8.0.200]
 
-TARGET_GATEWAY="192.168.1.1"                # Gateway of target network
 TARGET_CIDR="192.168.1.0/24"                # CIDR of target network
 TARGET_RANGE="192.168.1.0 255.255.255.0"    # Specify CIDR (should match above)
 
@@ -57,12 +56,12 @@ def_help(){
     echo ' |_|\_\\__,_||_||_|     \/    |_|     |_| \_|  \___/ |_|   |_____/  \____/  \____/ |_|  |_|'
     echo ""                                                                               
     echo ""                                                                               
-    echo "Don't forget to edit variables in $0!"
+    echo "Don't forget to edit variables in file $0 before running!"
     echo ""
     echo "-s, --server     : Build a OpenVPN Server with client ovpn"
     echo "-c, --client     : Build a client OVPN file only"
     echo "-r, --reverse    : Set up your routes/iptables for reverse VPN on server"
-    echo "-f, --flush      : Flush your IPTables"
+    echo "-f, --flush      : Stop OpenVPN. Flush your IPTables and clear routes"
     echo "-n, --nethunter  : Set up iptables for Nethunter Reverse VPN"
     echo "-h, --help       : Help Menu (this)"
     echo "--start-server   : Start OpenVPN server"
@@ -289,9 +288,9 @@ EOF
 fi
 
 
-#####################
-#  Routes/IPTABLES  #
-#####################
+######################
+# Interface/Forward  #
+######################
 def_route(){
     echo "1" > /proc/sys/net/ipv4/ip_forward
     echo "[+] Enable IP forwarding"
@@ -306,14 +305,6 @@ def_route(){
             break
         done
     fi
-
-    sudo iptables -t nat -A POSTROUTING -s 10.8.0.0/24 -o $SERVER_INTERFACE -j MASQUERADE
-    echo "[+] IPTables set for VPN subnet: iptables -t nat -A POSTROUTING -s 10.8.0.0/24 -o $SERVER_INTERFACE -j MASQUERADE"
-
-    # Create route 
-    sudo route add -host 10.8.0.200 dev tun0
-    sudo route add -net $TARGET_CIDR gw 10.8.0.200 dev tun0
-
 }
 
 if [ "$1" == "-r" ] || [ "$1" == "--reverse" ]; then
@@ -368,6 +359,12 @@ if [ "$1" == "--start-server" ]; then
     
     openvpn --cd /etc/openvpn --config /etc/openvpn/doom_server.conf &
     echo "[+] Starting openvpn server"
+
+    # Create route (requires tun0 to be present...let's sleep on it)
+    sleep 10
+    echo "[+] Setting routes to private subnet"
+    sudo route add -host 10.8.0.200 dev tun0
+    sudo route add -net $TARGET_CIDR gw 10.8.0.200 dev tun0
 
 fi
 
