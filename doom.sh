@@ -307,6 +307,11 @@ def_route(){
     fi
 }
 
+    # This is needed to allow client to access internet 
+    sudo iptables -t nat -A POSTROUTING -s 10.8.0.0/24 -o $SERVER_INTERFACE -j MASQUERADE
+    #echo "[+] DEBUG: IPTables set for VPN subnet:"
+    #echo "      -   iptables -t nat -A POSTROUTING -s 10.8.0.0/24 -o $SERVER_INTERFACE -j MASQUERADE"
+
 if [ "$1" == "-r" ] || [ "$1" == "--reverse" ]; then
     def_route
 fi
