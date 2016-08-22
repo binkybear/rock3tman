@@ -179,7 +179,11 @@ if [ "$1" == "--server" ] || [ "$1" == "-s" ]; then
 port $SERVER_PORT
 proto $SERVER_PROTOCOL
 
+# Use Tunnel instead of TAP (android support)
 dev tun
+
+# net30 breaks routing:  http://serverfault.com/a/623673
+topology subnet
 
 # Server Keys
 ca ca.crt
